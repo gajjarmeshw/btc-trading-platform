@@ -1,0 +1,32 @@
+[Unit]
+Description=BTC Trading Bot (Ultra Scalper)
+After=network.target
+
+[Service]
+# User running the bot (usually 'ubuntu' or 'ec2-user')
+User=ubuntu
+Group=ubuntu
+
+# Directory where code is cloned
+WorkingDirectory=/home/ubuntu/btc-trading-platform
+
+# Environment Variables
+# Method 1: Load from .env file (Recommended)
+EnvironmentFile=/home/ubuntu/btc-trading-platform/.env
+
+# Method 2: Manual overrides (if needed)
+# Environment=PYTHONUNBUFFERED=1
+
+# Command to start
+ExecStart=/usr/bin/python3 main.py --choice ml_1m
+
+# Auto-Restart on crash
+Restart=always
+RestartSec=10
+
+# Logging (View with: journalctl -u btc-bot -f)
+StandardOutput=append:/home/ubuntu/btc-trading-platform/data/service.log
+StandardError=append:/home/ubuntu/btc-trading-platform/data/service_error.log
+
+[Install]
+WantedBy=multi-user.target

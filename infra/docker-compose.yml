@@ -1,0 +1,10 @@
+version: "3.9"
+
+services:
+  btc-bot:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
