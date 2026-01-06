@@ -7,8 +7,8 @@ app = Flask(__name__)
 # SECURITY: Very basic protection. 
 # In production, use Nginx/Apache with proper auth or VPN.
 # For this personal bot, a simple query param or Basic Auth is better than nothing.
-# Usage: http://IP:5000/?key=mysecretpassword
-ACCESS_KEY = "admin123" 
+# Usage: http://IP:5000/?key=btc_alpha_secure_777
+ACCESS_KEY = os.getenv("DASHBOARD_KEY", "btc_alpha_secure_777") 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LOG_FILE = os.path.join(BASE_DIR, 'trading.log')
@@ -53,7 +53,7 @@ HTML_TEMPLATE = """
 """
 
 def check_auth():
-    # Simple check: ?key=admin123
+    # Simple check: ?key=...
     key = request.args.get('key')
     if key != ACCESS_KEY:
         return False
