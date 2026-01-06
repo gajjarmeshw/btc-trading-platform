@@ -107,6 +107,13 @@ HTML_TEMPLATE = """
 
 # ... (Auth remains same) ...
 
+def check_auth():
+    # Simple check: ?key=...
+    key = request.args.get('key')
+    if key != ACCESS_KEY:
+        return False
+    return True
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     try:
