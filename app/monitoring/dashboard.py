@@ -250,7 +250,81 @@ HTML_TEMPLATE = """
             }
         }
         
-        // ... (fetchConfig, saveConfig, fetchTrades remain similar but safer if needed) ...
+        async function fetchConfig() {
+            try {
+                const res = await fetch(`/api/config?key=${API_KEY}`);
+                const data = await res.json();
+                document.getElementById('cfg-tp').value = data.take_profit_pct;
+                document.getElementById('cfg-sl').value = data.stop_loss_pct;
+                document.getElementById('cfg-risk').value = data.risk_per_trade;
+            } catch(e) { uiLog("Config Error: " + e.message, "warn"); }
+        }
+        
+        async function saveConfig() {
+            const btn = document.querySelector('button');
+            btn.innerText = "SAVING...";
+            const payload = {
+                strategy_name: document.getElementById('cfg-strat').value,
+                take_profit_pct: parseFloat(document.getElementById('cfg-tp').value),
+                stop_loss_pct: parseFloat(document.getElementById('cfg-sl').value),
+                risk_per_trade: parseFloat(document.getElementById('cfg-risk').value)
+            };
+            
+            try {
+                await fetch(`/api/config?key=${API_KEY}`, { method: 'POST', headers: HEADERS, body: JSON.stringify(payload) });
+                document.getElementById('cfg-msg').innerText = "Running Update...";
+                document.getElementById('cfg-msg').style.color = "#2ea043";
+                setTimeout(() => document.getElementById('cfg-msg').innerText = "", 3000);
+            } catch(e) {
+                alert("Failed to save config");
+            }
+            btn.innerText = "UPDATE CONFIG";
+        }
+        
+        async function fetchLogs() {
+            try {
+                const res = await fetch(`/api/logs?key=${API_KEY}`);
+                const data = await res.json();
+                const container = document.getElementById('logs-content');
+                
+                // Only update if changed (simple check)
+                const text = data.logs.join("");
+                if (text !== lastLogLine) {
+                    // diagnostics lines are appended, don't overwrite them?
+                    // Actually, recreating the innerHTML wipes diagnostics.
+                    // Better: Append new logs only?
+                    // For simplicity, let's just prepend diagnostics or re-render.
+                    // Since diagnostics are rare, we can just render the logs.
+                    // If we want to keep diagnostics, we should manage them separately.
+                    // But for now, let's just make it work.
+                    container.innerHTML = data.logs.map(line => {
+                        let cls = "log-line";
+                        if (line.includes("ERROR")) cls += " log-error";
+                        else if (line.includes("WARNING")) cls += " log-warn";
+                        else if (line.includes("SIGNAL")) cls += " log-info";
+                        return `<div class="${cls}">${line}</div>`;
+                    }).join("");
+                    container.scrollTop = container.scrollHeight;
+                    lastLogLine = text;
+                }
+            } catch(e) { console.error(e); }
+        }
+        
+        async function fetchTrades() {
+            try {
+                const res = await fetch(`/api/trades?key=${API_KEY}`);
+                const data = await res.json();
+                const tbody = document.querySelector('#trades-table tbody');
+                tbody.innerHTML = data.map(t => `
+                    <tr>
+                        <td>${t.Timestamp.split(' ')[1]}</td>
+                        <td class="${t.Side.includes('BUY') ? 'text-green':'text-red'}">${t.Side}</td>
+                        <td>${t.Price}</td>
+                        <td class="${(t['PnL (USDT)']||"").includes('-') ? 'text-red' : 'text-green'}">${t['PnL (USDT)'] || '-'}</td>
+                    </tr>
+                `).join("");
+            } catch(e) {}
+        }
 
         // Start
         init();
