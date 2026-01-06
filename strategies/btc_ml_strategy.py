@@ -94,12 +94,19 @@ class BTCMLStrategyBase(BTCVolatilityBreakout):
         current = df.iloc[-1]
         prev = df.iloc[-2]
         
+        # 0. Volatility Breakout Check
         breakout = (current["close"] > current["bb_high"]) and (prev["close"] <= prev["bb_high"])
         
         if not breakout:
+            # Only log periodically or if close to breakout to avoid spam? 
+            # User wants detail, but every minute "No Breakout" is fine.
+            # Let's log if we are at least ABOVE the mid-band, to show we are watching.
+            if current["close"] > current["bb_mid"]:
+                import logging
+                logging.info(f"Analyzed: No Breakout. Close={current['close']:.2f} < BB_High={current['bb_high']:.2f}")
             return False
             
-        return True # Default check passing to subclass
+        return True 
 
 class BTCMLStrategy5m(BTCMLStrategyBase):
     name = "btc_ml_5m"
@@ -108,6 +115,7 @@ class BTCMLStrategy5m(BTCMLStrategyBase):
         super().__init__("5m", "models/btc_xgb_5m.joblib", "models/btc_xgb_threshold_5m.joblib")
         
     def should_enter(self, df):
+        import logging
         if not super().should_enter(df):
             return False
             
@@ -126,13 +134,29 @@ class BTCMLStrategy5m(BTCMLStrategyBase):
         try:
             X = current[features_list].values.reshape(1, -1)
             prob = self.model.predict_proba(X)[0][1]
-            return prob >= self.threshold
-        except Exception:
+            
+            # DETAILED DECISION LOG
+            log_msg = (
+                f"Breakout Detected! Analying w/ ML...\n"
+                f"  > Price: {current['close']:.2f}\n"
+                f"  > 1H Trend: {'BULLISH' if current['trend_1h']==1 else 'BEARISH'}\n"
+                f"  > RSI: {current['rsi']:.1f} | ADX: {current['adx']:.1f}\n"
+                f"  > ML Probability: {prob:.4f} (Threshold: {self.threshold:.4f})"
+            )
+            
+            if prob >= self.threshold:
+                logging.info(log_msg + "\n  >>> RESULT: PASS (GO LONG) <<<")
+                return True
+            else:
+                logging.info(log_msg + "\n  >>> RESULT: REJECT (Low Confidence) <<<")
+                return False
+                
+        except Exception as e:
+            logging.error(f"ML Prediction Failed: {e}")
             return False
 
     def should_exit(self, df, position):
         current = df.iloc[-1]
-        # 5m Exits (0.75% / 0.50%)
         if current["close"] >= position.entry * 1.0075: return True
         if current["close"] <= position.entry * 0.9950: return True
         return False
@@ -144,6 +168,7 @@ class BTCMLStrategy1m(BTCMLStrategyBase):
         super().__init__("1m", "models/btc_xgb_1m.joblib", "models/btc_xgb_threshold_1m.joblib")
         
     def should_enter(self, df):
+        import logging
         if not super().should_enter(df):
             return False
             
@@ -163,8 +188,25 @@ class BTCMLStrategy1m(BTCMLStrategyBase):
         try:
             X = current[features_list].values.reshape(1, -1)
             prob = self.model.predict_proba(X)[0][1]
-            return prob >= self.threshold
-        except Exception:
+            
+            # DETAILED DECISION LOG
+            log_msg = (
+                f"Breakout Detected! Analying w/ ML...\n"
+                f"  > Price: {current['close']:.2f}\n"
+                f"  > 1H Trend: {'BULLISH' if current['trend_1h']==1 else 'BEARISH'}\n"
+                f"  > RSI: {current['rsi']:.1f} | ADX: {current['adx']:.1f}\n"
+                f"  > ML Probability: {prob:.4f} (Threshold: {self.threshold:.4f})"
+            )
+            
+            if prob >= self.threshold:
+                logging.info(log_msg + "\n  >>> RESULT: PASS (GO LONG) <<<")
+                return True
+            else:
+                logging.info(log_msg + "\n  >>> RESULT: REJECT (Low Confidence) <<<")
+                return False
+                
+        except Exception as e:
+            logging.error(f"ML Prediction Failed: {e}")
             return False
 
     def should_exit(self, df, position):
