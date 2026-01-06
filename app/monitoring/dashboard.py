@@ -272,34 +272,42 @@ HTML_TEMPLATE = """
             }
         }
 
-        async function runBacktest() {
+        async function streamCmd(url, payload) {
             const out = document.getElementById('lab-output');
-            out.innerText = "Running Backtest... Please Wait...";
-            const strat = document.getElementById('bt-strat').value;
-            const days = document.getElementById('lab-days').value;
+            out.innerText = "Initializing...\n";
             
             try {
-                const res = await fetch(`/api/backtest?key=${API_KEY}`, {
-                    method: 'POST', headers: HEADERS, body: JSON.stringify({ strategy: strat, days: parseInt(days) })
+                const response = await fetch(url, {
+                    method: 'POST', 
+                    headers: HEADERS, 
+                    body: JSON.stringify(payload)
                 });
-                const data = await res.json();
-                out.innerText = data.output;
-            } catch(e) { out.innerText = "Error: " + e.message; }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const text = decoder.decode(value);
+                    out.innerText += text;
+                    out.scrollTop = out.scrollHeight; // Auto-scroll
+                }
+            } catch (e) {
+                out.innerText += "\nError: " + e.message;
+            }
+        }
+
+        async function runBacktest() {
+            const strat = document.getElementById('bt-strat').value;
+            const days = document.getElementById('lab-days').value;
+            await streamCmd(`/api/backtest?key=${API_KEY}`, { strategy: strat, days: parseInt(days) });
         }
 
         async function runTrain() {
-            const out = document.getElementById('lab-output');
-            out.innerText = "Training Model... (This takes a while)...";
             const type = document.getElementById('train-type').value;
             const days = document.getElementById('lab-days').value;
-            
-            try {
-                const res = await fetch(`/api/train?key=${API_KEY}`, {
-                    method: 'POST', headers: HEADERS, body: JSON.stringify({ type: type, days: parseInt(days) })
-                });
-                const data = await res.json();
-                out.innerText = data.output;
-            } catch(e) { out.innerText = "Error: " + e.message; }
+            await streamCmd(`/api/train?key=${API_KEY}`, { type: type, days: parseInt(days) });
         }
 
         // --- DATA FETCHING ---
@@ -538,38 +546,46 @@ def api_backtest():
     strategy = data.get("strategy", "ml_1m")
     days = str(data.get("days", 180))
     
-    # Construct command
-    # python backtest_runner.py --strategy ml_1m --days 180
-    cmd = [sys.executable, os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy, "--days", days]
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
-        return jsonify({
-            "status": "success" if result.returncode == 0 else "error",
-            "output": result.stdout + "\n" + result.stderr
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    def generate():
+        cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy, "--days", days]
+        
+        # Popen with unbuffered output
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
+        
+        yield "Starting Backtest Simulation...\n"
+        
+        for line in iter(process.stdout.readline, ''):
+            yield line
+            
+        process.stdout.close()
+        process.wait()
+        yield f"\n[Process Finished with Code {process.returncode}]"
+
+    return Response(generate(), mimetype='text/plain')
 
 @app.route('/api/train', methods=['POST'])
 def api_train():
     if not check_auth(): return jsonify({"error": "Auth failed"}), 403
     
     data = request.json
-    strategy_type = data.get("type", "5m") # 1m or 5m
+    strategy_type = data.get("type", "5m") 
     days = str(data.get("days", 180))
     
-    # python scripts/train_model.py --type 5m --days 180
-    cmd = [sys.executable, os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type, "--days", days]
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
-        return jsonify({
-            "status": "success" if result.returncode == 0 else "error",
-            "output": result.stdout + "\n" + result.stderr
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    def generate():
+        cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type, "--days", days]
+        
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
+        
+        yield "Starting Model Training...\n"
+        
+        for line in iter(process.stdout.readline, ''):
+            yield line
+            
+        process.stdout.close()
+        process.wait()
+        yield f"\n[Process Finished with Code {process.returncode}]"
+
+    return Response(generate(), mimetype='text/plain')
 
 @app.route('/')
 def index():
