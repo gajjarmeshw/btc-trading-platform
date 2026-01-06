@@ -6,10 +6,10 @@ echo "Pulling latest code..."
 git pull origin main
 
 echo "Installing requirements (just in case)..."
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt --break-system-packages 2>/dev/null || pip3 install -r requirements.txt || echo "Pip install skipped."
 
-echo "Starting Trading Bot (Background Mode)..."
-nohup python3 main.py > app.log 2>&1 &
+echo "Starting Trading Bot (Background Mode) - STRATEGY: 1m SCALPER..."
+nohup python3 main.py --choice ml_1m > app.log 2>&1 &
 
 echo "Deployment Complete. Logs are writing to app.log"
 echo "Monitor with: tail -f app.log"
