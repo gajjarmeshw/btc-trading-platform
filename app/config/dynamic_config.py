@@ -33,10 +33,16 @@ def save_config(config_dict):
     except Exception as e:
         print(f"Error saving config: {e}")
 
+from datetime import datetime, timedelta, timezone
+
 def update_status(data):
     """Writes status.json (Price, Balance, etc.)"""
     # specific fields expected: price, balance, position, last_update
-    data["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # IST = UTC + 5:30
+    ist_offset = timezone(timedelta(hours=5, minutes=30))
+    data["last_updated"] = datetime.now(ist_offset).strftime("%Y-%m-%d %H:%M:%S")
+    
     try:
         with open(STATUS_FILE, 'w') as f:
             json.dump(data, f)

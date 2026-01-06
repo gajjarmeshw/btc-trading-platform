@@ -17,6 +17,16 @@ def main():
     # Configure Logging (File + Console)
     import logging
     import os
+    from datetime import datetime, timedelta, timezone
+    import time
+    
+    # Force Logging to use IST
+    def ist_converter(*args):
+        utc_dt = datetime.now(timezone.utc)
+        ist_dt = utc_dt.astimezone(timezone(timedelta(hours=5, minutes=30)))
+        return ist_dt.timetuple()
+
+    logging.Formatter.converter = ist_converter
     
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trading.log')
     logging.basicConfig(
