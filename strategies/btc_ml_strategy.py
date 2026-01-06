@@ -16,9 +16,9 @@ class BTCMLStrategyBase(BTCVolatilityBreakout):
         self.model = None
         self.threshold = 0.5
         
-        # Dynamic Params (Defaults 1:1 Proven Ratio)
+        # Dynamic Params (Micro-Optimized)
         self.dynamic_sl = 0.0035 # 0.35%
-        self.dynamic_tp = 0.0035 # 0.35%
+        self.dynamic_tp = 0.0040 # 0.40%
         
         self.load_model(model_path, thresh_path)
         

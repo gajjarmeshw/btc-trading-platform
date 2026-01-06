@@ -89,10 +89,11 @@ def feature_engineering(df, strategy_type="5m"):
     t_horizon = 60
     
     if strategy_type == "1m":
-        # Balanced 1:1 Scalper (0.35% / 0.35%)
-        # PROVEN CONFIGURATION: 57% Win Rate, 1000 Trades.
-        # This is the "Money Printer" setup that allows high volume & leverage.
-        tp = 0.0035
+        # Final Profit Squeeze (0.40% / 0.35%)
+        # Just a tiny bit of extra greed.
+        # TP 0.40% (+0.05% boost) / SL 0.35% (Standard)
+        # If WR holds >60%, this prints money.
+        tp = 0.0040
         sl = 0.0035
     else:
         # 5m High-Yield: 0.75% / 0.50%
