@@ -314,6 +314,8 @@ HTML_TEMPLATE = """
             try {
                 const res = await fetch(`/api/trades?key=${API_KEY}`);
                 const data = await res.json();
+                
+                // 1. Update Table
                 const tbody = document.querySelector('#trades-table tbody');
                 tbody.innerHTML = data.map(t => `
                     <tr>
@@ -323,6 +325,25 @@ HTML_TEMPLATE = """
                         <td class="${(t['PnL (USDT)']||"").includes('-') ? 'text-red' : 'text-green'}">${t['PnL (USDT)'] || '-'}</td>
                     </tr>
                 `).join("");
+
+                // 2. Update Chart Markers
+                if (window.candleSeries) {
+                    const markers = data.map(t => {
+                        // Parse time. Timestamp is "YYYY-MM-DD HH:MM:SS" -> UNIX
+                        const time = new Date(t.Timestamp).getTime() / 1000;
+                        const isBuy = t.Side.includes('BUY');
+                        return {
+                            time: time,
+                            position: isBuy ? 'belowBar' : 'aboveBar',
+                            color: isBuy ? '#2ea043' : '#da3633',
+                            shape: isBuy ? 'arrowUp' : 'arrowDown',
+                            text: `${t.Side} @ ${t.Price}`
+                        };
+                    });
+                    // Sort by time (required by library)
+                    markers.sort((a, b) => a.time - b.time);
+                    window.candleSeries.setMarkers(markers);
+                }
             } catch(e) {}
         }
 
