@@ -34,6 +34,22 @@ class LiveEngine:
         logging.info("Starting Live Trading Loop...")
         self.executor.sync_position()
         
+        # Initial Status Update (So Dashboard isn't empty during first wait)
+        try:
+            logging.info("Performing initial dashboard update...")
+            df_init = self.data_feed.get_latest()
+            if df_init is not None and not df_init.empty:
+                init_price = df_init.iloc[-1]["close"]
+                update_status({
+                    "price": init_price,
+                    "balance": "Syncing...",
+                    "position": "LONG" if self.executor.has_position() else "FLAT",
+                    "strategy": self.strategy.name, 
+                    "last_updated": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                })
+        except Exception as e:
+            logging.warning(f"Initial status update failed: {e}")
+        
         while True:
             try:
                 self.sync_time()
