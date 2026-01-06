@@ -177,6 +177,10 @@ HTML_TEMPLATE = """
             console.error("JS CRASH:", error);
             return false;
         };
+    </script>
+    
+    <script>
+        // --- MAIN SCRIPT ---
         
         // --- 1. PROVE JS IS RUNNING ---
         document.getElementById('js-status').innerText = "JAVASCRIPT IS ALIVE (Wait...)";
