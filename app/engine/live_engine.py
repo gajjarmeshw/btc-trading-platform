@@ -51,7 +51,7 @@ class LiveEngine:
                 # Fetch Data
                 df = self.data_feed.get_latest()
                 if df is None or len(df) < 200:
-                    logging.warning("Insufficient data. Retrying next cycle.")
+                    logging.warning(f"Insufficient data ({len(df) if df is not None else 0} rows). Retrying next cycle.")
                     continue
                     
                 # Calculate Indicators

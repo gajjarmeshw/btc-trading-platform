@@ -7,7 +7,7 @@ class DataFeed:
         raise NotImplementedError
 
 class BinanceDataFeed(DataFeed):
-    def __init__(self, symbol="BTC/USDT", timeframe="5m", limit=100):
+    def __init__(self, symbol="BTC/USDT", timeframe="5m", limit=300):
         self.symbol = symbol
         self.timeframe = timeframe
         self.limit = limit
