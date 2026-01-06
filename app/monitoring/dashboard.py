@@ -95,42 +95,77 @@ HTML_TEMPLATE = """
             <div id="chart-container"></div>
         </div>
         
-        <!-- TOP RIGHT: CONTROLS -->
+        <!-- TOP RIGHT: CONTROLS & LAB -->
         <div class="panel" style="grid-row: 1 / 3; grid-column: 2 / 3; border-left: 1px solid var(--border);">
-            <div class="panel-header">STRATEGY & RISK</div>
-            <div class="control-form">
-                <div class="input-group">
-                    <label>ACTIVE STRATEGY</label>
-                    <select id="cfg-strat">
-                        <option value="btc_ml_1m">ML Scalper (1m)</option>
-                        <option value="btc_ml_5m">ML Swing (5m)</option>
+            
+            <!-- TABS -->
+            <div style="display: flex; border-bottom: 1px solid var(--border);">
+                <div class="tab active" onclick="switchTab('live')" id="tab-live" style="flex:1; padding:10px; text-align:center; cursor:pointer; background: var(--panel);">LIVE</div>
+                <div class="tab" onclick="switchTab('lab')" id="tab-lab" style="flex:1; padding:10px; text-align:center; cursor:pointer; background: var(--bg); border-left: 1px solid var(--border);">LAB</div>
+            </div>
+
+            <!-- LIVE TAB CONTENT -->
+            <div id="view-live">
+                <div class="panel-header">STRATEGY & RISK</div>
+                <div class="control-form">
+                    <div class="input-group">
+                        <label>ACTIVE STRATEGY</label>
+                        <select id="cfg-strat">
+                            <option value="btc_ml_1m">ML Scalper (1m)</option>
+                            <option value="btc_ml_5m">ML Swing (5m)</option>
+                        </select>
+                    </div>
+                    <!-- Divider -->
+                    <div style="height: 1px; background: #30363d; margin: 5px 0;"></div>
+                    <div class="input-group">
+                        <label>TAKE PROFIT (%)</label>
+                        <input type="number" step="0.1" id="cfg-tp">
+                    </div>
+                    <div class="input-group">
+                        <label>STOP LOSS (%)</label>
+                        <input type="number" step="0.1" id="cfg-sl">
+                    </div>
+                    <div class="input-group">
+                        <label>RISK / TRADE (%)</label>
+                        <input type="number" step="0.1" id="cfg-risk">
+                    </div>
+                    <button onclick="saveConfig()">UPDATE CONFIG</button>
+                    <div id="cfg-msg" style="font-size: 0.8em; text-align: center; height: 20px;"></div>
+                </div>
+                
+                <div class="panel-header">LATEST TRADES</div>
+                <div style="flex: 1; overflow: auto; max-height: 300px;">
+                    <table id="trades-table">
+                        <thead><tr><th>Time</th><th>Side</th><th>Price</th><th>PnL</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- LAB TAB CONTENT -->
+            <div id="view-lab" style="display: none; padding: 15px; flex-direction: column; gap: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="panel-header" style="background:none; padding-left:0;">BACKTEST SIMULATOR</div>
+                    <select id="bt-strat" style="width: 100%;">
+                        <option value="ml_1m">Strategy: 1m Scalper</option>
+                        <option value="ml_5m">Strategy: 5m Swing</option>
                     </select>
+                    <button onclick="runBacktest()" style="background: #a371f7;">RUN BACKTEST</button>
                 </div>
-                <!-- Divider -->
-                <div style="height: 1px; background: #30363d; margin: 5px 0;"></div>
-                <div class="input-group">
-                    <label>TAKE PROFIT (%)</label>
-                    <input type="number" step="0.1" id="cfg-tp">
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="panel-header" style="background:none; padding-left:0;">MODEL TRAINER</div>
+                    <select id="train-type" style="width: 100%;">
+                        <option value="1m">Train 1m Model</option>
+                        <option value="5m">Train 5m Model</option>
+                    </select>
+                    <button onclick="runTrain()" style="background: #da3633;">RETRAIN AI MODEL</button>
                 </div>
-                <div class="input-group">
-                    <label>STOP LOSS (%)</label>
-                    <input type="number" step="0.1" id="cfg-sl">
-                </div>
-                <div class="input-group">
-                    <label>RISK / TRADE (%)</label>
-                    <input type="number" step="0.1" id="cfg-risk">
-                </div>
-                <button onclick="saveConfig()">UPDATE CONFIG</button>
-                <div id="cfg-msg" style="font-size: 0.8em; text-align: center; height: 20px;"></div>
+                
+                <div class="panel-header" style="background:none; padding-left:0;">LAB OUTPUT</div>
+                <div id="lab-output" style="background: #000; padding: 10px; font-family: monospace; font-size: 0.75em; height: 300px; overflow: auto; color: #0f0; border: 1px solid #30363d;">Waiting for command...</div>
             </div>
             
-            <div class="panel-header">LATEST TRADES</div>
-            <div style="flex: 1; overflow: auto;">
-                <table id="trades-table">
-                    <thead><tr><th>Time</th><th>Side</th><th>Price</th><th>PnL</th></tr></thead>
-                    <tbody></tbody>
-                </table>
-            </div>
         </div>
         
         <!-- BOTTOM LEFT: LOGS -->
@@ -214,6 +249,49 @@ HTML_TEMPLATE = """
             } catch (e) {
                 uiLog("FATAL INIT ERROR: " + e.message, "error");
             }
+        }
+
+        // --- LAB FUNCTIONS ---
+        function switchTab(tab) {
+            if (tab === 'live') {
+                document.getElementById('view-live').style.display = 'block';
+                document.getElementById('view-lab').style.display = 'none';
+                document.getElementById('tab-live').style.background = 'var(--panel)';
+                document.getElementById('tab-lab').style.background = 'var(--bg)';
+            } else {
+                document.getElementById('view-live').style.display = 'none';
+                document.getElementById('view-lab').style.display = 'flex';
+                document.getElementById('tab-live').style.background = 'var(--bg)';
+                document.getElementById('tab-lab').style.background = 'var(--panel)';
+            }
+        }
+
+        async function runBacktest() {
+            const out = document.getElementById('lab-output');
+            out.innerText = "Running Backtest... Please Wait...";
+            const strat = document.getElementById('bt-strat').value;
+            
+            try {
+                const res = await fetch(`/api/backtest?key=${API_KEY}`, {
+                    method: 'POST', headers: HEADERS, body: JSON.stringify({ strategy: strat })
+                });
+                const data = await res.json();
+                out.innerText = data.output;
+            } catch(e) { out.innerText = "Error: " + e.message; }
+        }
+
+        async function runTrain() {
+            const out = document.getElementById('lab-output');
+            out.innerText = "Training Model... (This takes 10-20s)...";
+            const type = document.getElementById('train-type').value;
+            
+            try {
+                const res = await fetch(`/api/train?key=${API_KEY}`, {
+                    method: 'POST', headers: HEADERS, body: JSON.stringify({ type: type })
+                });
+                const data = await res.json();
+                out.innerText = data.output;
+            } catch(e) { out.innerText = "Error: " + e.message; }
         }
 
         // --- DATA FETCHING ---
@@ -439,6 +517,47 @@ def api_candles():
                 "volume": c[5]
             })
         return jsonify(formatted)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+import subprocess
+
+@app.route('/api/backtest', methods=['POST'])
+def api_backtest():
+    if not check_auth(): return jsonify({"error": "Auth failed"}), 403
+    
+    data = request.json
+    strategy = data.get("strategy", "ml_1m")
+    
+    # Construct command
+    # python backtest_runner.py --strategy ml_1m
+    cmd = [sys.executable, os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
+        return jsonify({
+            "status": "success" if result.returncode == 0 else "error",
+            "output": result.stdout + "\n" + result.stderr
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/train', methods=['POST'])
+def api_train():
+    if not check_auth(): return jsonify({"error": "Auth failed"}), 403
+    
+    data = request.json
+    strategy_type = data.get("type", "5m") # 1m or 5m
+    
+    # python scripts/train_model.py --type 5m
+    cmd = [sys.executable, os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
+        return jsonify({
+            "status": "success" if result.returncode == 0 else "error",
+            "output": result.stdout + "\n" + result.stderr
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
