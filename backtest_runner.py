@@ -4,10 +4,24 @@ from strategies.btc_ml_strategy import BTCMLStrategy5m, BTCMLStrategy1m
 import pandas as pd
 import os
 
-def load_data(filepath):
+import sys
+sys.path.append(os.getcwd()) # Ensure root is in path
+from scripts.download_data import download_data
+
+def load_data(filepath, timeframe="5m", days=180):
     if not os.path.exists(filepath):
-        print(f"Error: Data file {filepath} not found.")
-        return None
+        print(f"Data file {filepath} not found. Attempting auto-download ({days} days)...")
+        try:
+            # Infer args or use defaults
+            # Assuming filepath structure data/historical/BTC_USDT_5m.csv
+            download_data("BTC/USDT", timeframe, days, os.path.dirname(filepath))
+            if not os.path.exists(filepath):
+                print("Error: Download failed or file naming mismatch.")
+                return None
+        except Exception as e:
+            print(f"Auto-download failed: {e}")
+            return None
+            
     df = pd.read_csv(filepath)
     # Ensure necessary columns
     expected_cols = ["timestamp", "open", "high", "low", "close", "volume"]
@@ -22,22 +36,29 @@ def main():
     parser = argparse.ArgumentParser(description="Run backtest on historical data")
     parser.add_argument("data_path", nargs="?", default="data/historical/BTC_USDT_5m.csv", help="Path to historical data CSV")
     parser.add_argument("--strategy", type=str, default="ml_5m", choices=["ml_5m", "ml_1m"], help="Strategy to run")
+    parser.add_argument("--days", type=int, default=180, help="Days of history to use")
     parser.add_argument("--compounding", action="store_true", help="Enable compounding (reinvest profits)")
     args = parser.parse_args()
 
-    print(f"Loading data from {args.data_path}...")
+    timeframe = "1m" if args.strategy == "ml_1m" else "5m"
     
-    historical_data = load_data(args.data_path)
+    # Auto-adjust path if default used but strategy changed
+    if args.data_path == "data/historical/BTC_USDT_5m.csv" and timeframe == "1m":
+         args.data_path = "data/historical/BTC_USDT_1m.csv"
+
+    print(f"Loading data from {args.data_path} (Last {args.days} Days)...")
+    
+    historical_data = load_data(args.data_path, timeframe=timeframe, days=args.days)
     if historical_data is None:
         return
 
-    # Filter Last 1 Year
+    # Filter Last N Days
     if not pd.api.types.is_datetime64_any_dtype(historical_data["timestamp"]):
         historical_data["timestamp"] = pd.to_datetime(historical_data["timestamp"])
     
     end_date = historical_data["timestamp"].max()
-    start_date = end_date - pd.Timedelta(days=365)
-    print(f"Filtering data: Last 1 Year ({start_date} to {end_date})")
+    start_date = end_date - pd.Timedelta(days=args.days)
+    print(f"Filtering data: {start_date} to {end_date}")
     
     historical_data = historical_data[historical_data["timestamp"] >= start_date].copy().reset_index(drop=True)
 

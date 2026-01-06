@@ -11,10 +11,23 @@ import argparse
 if not os.path.exists("models"):
     os.makedirs("models")
 
-def load_data(filepath):
+import sys
+# Fix path to find scripts.download_data from inside scripts/
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from scripts.download_data import download_data
+
+def load_data(filepath, timeframe="5m", days=180):
     if not os.path.exists(filepath):
-        print(f"Error: {filepath} not found.")
-        return None
+        print(f"Data file {filepath} not found. Attempting auto-download ({days} days)...")
+        try:
+            download_data("BTC/USDT", timeframe, days, os.path.dirname(filepath))
+        except Exception as e:
+            print(f"Download failed: {e}")
+            return None
+            
+    if not os.path.exists(filepath):
+         return None
+         
     df = pd.read_csv(filepath)
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     return df
@@ -108,16 +121,18 @@ def feature_engineering(df, strategy_type="5m"):
 def train_model():
     parser = argparse.ArgumentParser()
     parser.add_argument("--type", type=str, default="5m", choices=["1m", "5m"], help="Strategy Type")
+    parser.add_argument("--days", type=int, default=180, help="Days of history to use")
     args = parser.parse_args()
     
     strategy_type = args.type
-    print(f"Training Model for Strategy: {strategy_type}")
+    days = args.days
+    print(f"Training Model for Strategy: {strategy_type} (Days: {days})")
     
     # Select Data File
     data_file = "data/historical/BTC_USDT_1m.csv" if strategy_type == "1m" else "data/historical/BTC_USDT_5m.csv"
     
     print(f"Loading data from {data_file}...")
-    df = load_data(data_file)
+    df = load_data(data_file, timeframe=strategy_type, days=days)
     if df is None: return
 
     print("Generating enhanced features (XGBoost)...")

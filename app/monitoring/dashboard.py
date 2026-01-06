@@ -144,6 +144,12 @@ HTML_TEMPLATE = """
 
             <!-- LAB TAB CONTENT -->
             <div id="view-lab" style="display: none; padding: 15px; flex-direction: column; gap: 20px;">
+                
+                <div class="input-group">
+                    <label>DATA HISTORY (DAYS)</label>
+                    <input type="number" id="lab-days" value="180" min="30" max="1000">
+                </div>
+                
                 <div style="display: flex; flex-direction: column; gap: 10px;">
                     <div class="panel-header" style="background:none; padding-left:0;">BACKTEST SIMULATOR</div>
                     <select id="bt-strat" style="width: 100%;">
@@ -270,10 +276,11 @@ HTML_TEMPLATE = """
             const out = document.getElementById('lab-output');
             out.innerText = "Running Backtest... Please Wait...";
             const strat = document.getElementById('bt-strat').value;
+            const days = document.getElementById('lab-days').value;
             
             try {
                 const res = await fetch(`/api/backtest?key=${API_KEY}`, {
-                    method: 'POST', headers: HEADERS, body: JSON.stringify({ strategy: strat })
+                    method: 'POST', headers: HEADERS, body: JSON.stringify({ strategy: strat, days: parseInt(days) })
                 });
                 const data = await res.json();
                 out.innerText = data.output;
@@ -282,12 +289,13 @@ HTML_TEMPLATE = """
 
         async function runTrain() {
             const out = document.getElementById('lab-output');
-            out.innerText = "Training Model... (This takes 10-20s)...";
+            out.innerText = "Training Model... (This takes a while)...";
             const type = document.getElementById('train-type').value;
+            const days = document.getElementById('lab-days').value;
             
             try {
                 const res = await fetch(`/api/train?key=${API_KEY}`, {
-                    method: 'POST', headers: HEADERS, body: JSON.stringify({ type: type })
+                    method: 'POST', headers: HEADERS, body: JSON.stringify({ type: type, days: parseInt(days) })
                 });
                 const data = await res.json();
                 out.innerText = data.output;
@@ -528,10 +536,11 @@ def api_backtest():
     
     data = request.json
     strategy = data.get("strategy", "ml_1m")
+    days = str(data.get("days", 180))
     
     # Construct command
-    # python backtest_runner.py --strategy ml_1m
-    cmd = [sys.executable, os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy]
+    # python backtest_runner.py --strategy ml_1m --days 180
+    cmd = [sys.executable, os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy, "--days", days]
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
@@ -548,9 +557,10 @@ def api_train():
     
     data = request.json
     strategy_type = data.get("type", "5m") # 1m or 5m
+    days = str(data.get("days", 180))
     
-    # python scripts/train_model.py --type 5m
-    cmd = [sys.executable, os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type]
+    # python scripts/train_model.py --type 5m --days 180
+    cmd = [sys.executable, os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type, "--days", days]
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=BASE_DIR)
