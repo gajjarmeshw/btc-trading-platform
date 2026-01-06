@@ -98,12 +98,9 @@ class BTCMLStrategyBase(BTCVolatilityBreakout):
         breakout = (current["close"] > current["bb_high"]) and (prev["close"] <= prev["bb_high"])
         
         if not breakout:
-            # Only log periodically or if close to breakout to avoid spam? 
-            # User wants detail, but every minute "No Breakout" is fine.
-            # Let's log if we are at least ABOVE the mid-band, to show we are watching.
-            if current["close"] > current["bb_mid"]:
-                import logging
-                logging.info(f"Analyzed: No Breakout. Close={current['close']:.2f} < BB_High={current['bb_high']:.2f}")
+            # FORCE LOG for user visibility
+            import logging
+            logging.info(f"[Analysis] Price: {current['close']:.2f} | BB High: {current['bb_high']:.2f} | Action: WAIT (No Breakout)")
             return False
             
         return True 

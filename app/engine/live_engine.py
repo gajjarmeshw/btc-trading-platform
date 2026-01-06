@@ -56,6 +56,25 @@ class LiveEngine:
                 
                 # 1. Update Dynamic Config
                 config = load_config()
+                
+                # --- STRATEGY HOT-SWAP CHECK ---
+                target_strat = config.get("strategy_name")
+                if target_strat and target_strat != self.strategy.name:
+                    logging.info(f">>> SWITCHING STRATEGY: {self.strategy.name} -> {target_strat} <<<")
+                    try:
+                        from strategies.btc_ml_strategy import BTCMLStrategy1m, BTCMLStrategy5m
+                        if target_strat == "btc_ml_1m":
+                            self.strategy = BTCMLStrategy1m()
+                        elif target_strat == "btc_ml_5m":
+                            self.strategy = BTCMLStrategy5m()
+                        
+                        # Update Interval
+                        self.interval_seconds = self.timeframe_map.get(self.strategy.timeframe_str, 60)
+                        logging.info(f"Strategy Switched Successfully. New Interval: {self.interval_seconds}s")
+                        
+                    except Exception as e:
+                        logging.error(f"Strategy Switch Failed: {e}")
+
                 # Pass config to strategy if supported
                 if hasattr(self.strategy, 'update_parameters'):
                     self.strategy.update_parameters(config)
@@ -78,15 +97,20 @@ class LiveEngine:
                         btc = info['BTC']['free']
                         bal = f"${usdt:.2f} | {btc:.5f} BTC"
                      except: pass
-
+                     
                 status_data = {
                     "price": last_price,
                     "balance": bal,
                     "position": "LONG" if self.executor.has_position() else "FLAT",
-                    "strategy": self.strategy.name
+                    "strategy": self.strategy.name,
+                    # Add current config for dashboard feedback
+                    "active_config": {
+                        "take_profit_pct": getattr(self.strategy, 'dynamic_tp', 0) * 100,
+                        "stop_loss_pct": getattr(self.strategy, 'dynamic_sl', 0) * 100
+                    }
                 }
                 update_status(status_data)
-
+                
                 # ... (Rest of loop) ...
                 
                 if df is None or len(df) < 200:
