@@ -62,7 +62,7 @@ def check_auth():
 @app.route('/')
 def index():
     if not check_auth():
-        return "Access Denied. Use ?key=admin123", 403
+        return "Access Denied.", 403
 
     # Read Logs
     logs = ""
