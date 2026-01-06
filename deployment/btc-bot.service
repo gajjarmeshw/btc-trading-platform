@@ -18,7 +18,7 @@ EnvironmentFile=/home/ubuntu/btc-trading-platform/.env
 # Environment=PYTHONUNBUFFERED=1
 
 # Command to start
-ExecStart=/usr/bin/python3 main.py --choice ml_1m
+ExecStart=/home/ubuntu/btc-trading-platform/venv/bin/python main.py --choice ml_1m
 
 # Auto-Restart on crash
 Restart=always
