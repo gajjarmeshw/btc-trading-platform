@@ -253,7 +253,7 @@ HTML_TEMPLATE = """
 
         async function streamCmd(url, payload) {
             const out = document.getElementById('lab-output');
-            out.innerText = "Initializing...\n";
+            out.innerText = "Initializing...\\n";
             
             try {
                 const response = await fetch(url, {
@@ -273,7 +273,7 @@ HTML_TEMPLATE = """
                     out.scrollTop = out.scrollHeight; // Auto-scroll
                 }
             } catch (e) {
-                out.innerText += "\nError: " + e.message;
+                out.innerText += "\\nError: " + e.message;
             }
         }
 
