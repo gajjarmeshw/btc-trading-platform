@@ -17,8 +17,28 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.download_data import download_data
 
 def load_data(filepath, timeframe="5m", days=180):
+    need_download = False
     if not os.path.exists(filepath):
         print(f"Data file {filepath} not found. Attempting auto-download ({days} days)...")
+        need_download = True
+    else:
+        # Validate existing data duration
+        try:
+            df = pd.read_csv(filepath)
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                min_date = df['timestamp'].min()
+                required_date = pd.Timestamp.now() - pd.Timedelta(days=days)
+                # Allow 1 day buffer
+                if min_date > (required_date + pd.Timedelta(days=1)):
+                    print(f"Existing data insufficient (Starts {min_date}, need {required_date}). Re-downloading...")
+                    need_download = True
+            else:
+                 need_download = True
+        except:
+            need_download = True
+
+    if need_download:
         try:
             download_data("BTC/USDT", timeframe, days, os.path.dirname(filepath))
         except Exception as e:

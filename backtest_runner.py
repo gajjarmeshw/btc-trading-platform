@@ -9,8 +9,28 @@ sys.path.append(os.getcwd()) # Ensure root is in path
 from scripts.download_data import download_data
 
 def load_data(filepath, timeframe="5m", days=180):
+    need_download = False
     if not os.path.exists(filepath):
-        print(f"Data file {filepath} not found. Attempting auto-download ({days} days)...")
+        print(f"Data file {filepath} not found. Downloading...")
+        need_download = True
+    else:
+        # Validate existing data duration
+        try:
+            df = pd.read_csv(filepath)
+            if 'timestamp' in df.columns:
+                df['timestamp'] = pd.to_datetime(df['timestamp'])
+                min_date = df['timestamp'].min()
+                required_date = pd.Timestamp.now() - pd.Timedelta(days=days)
+                # Allow 1 day buffer
+                if min_date > (required_date + pd.Timedelta(days=1)):
+                    print(f"Existing data insufficient (Starts {min_date}, need {required_date}). Re-downloading...")
+                    need_download = True
+            else:
+                 need_download = True
+        except:
+            need_download = True
+
+    if need_download:
         try:
             # Infer args or use defaults
             # Assuming filepath structure data/historical/BTC_USDT_5m.csv
@@ -18,11 +38,11 @@ def load_data(filepath, timeframe="5m", days=180):
             if not os.path.exists(filepath):
                 print("Error: Download failed or file naming mismatch.")
                 return None
+            df = pd.read_csv(filepath)
         except Exception as e:
             print(f"Auto-download failed: {e}")
             return None
             
-    df = pd.read_csv(filepath)
     # Ensure necessary columns
     expected_cols = ["timestamp", "open", "high", "low", "close", "volume"]
     if not all(col in df.columns for col in expected_cols):
