@@ -2,3 +2,8 @@
 __pycache__/
 # data/
 data/historical/*.csv
+*.log
+__pycache__/
+*.pyc
+.env
+venv/
