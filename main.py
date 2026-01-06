@@ -14,6 +14,22 @@ def main():
 
     print(f"Welcome to BTC Trading Platform (Live Mode) - {args.choice}")
     
+    # Configure Logging (File + Console)
+    import logging
+    import os
+    
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trading.log')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
+    logging.info("--- Service Started ---")
+    
     if args.choice == "ml_1m":
         print("Strategy: 1m Ultra-Scalper")
         strategy = BTCMLStrategy1m()
