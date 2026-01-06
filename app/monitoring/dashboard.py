@@ -28,7 +28,8 @@ HTML_TEMPLATE = """
 <html>
 <head>
     <title>BTC Pro Terminal</title>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Fixing Chart Error: Pinning to Stable v4.1.1 -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         :root { --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9; --green: #2ea043; --red: #da3633; --blue: #58a6ff; }
         body { margin: 0; padding: 0; font-family: 'Segoe UI', monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
