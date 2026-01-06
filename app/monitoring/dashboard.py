@@ -182,6 +182,13 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
+        // --- GLOBAL ERROR HANDLER ---
+        window.onerror = function(msg, url, line, col, error) {
+            alert("JS CRASH: " + msg + "\\nLine: " + line);
+            console.error("JS CRASH:", error);
+            return false;
+        };
+
         const API_KEY = "{{ key }}";
         const HEADERS = { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' };
         
@@ -623,7 +630,7 @@ def index():
     
     # Render the PRO UI (We will replace HTML_TEMPLATE next)
     # Passing the key to the template so JS can use it
-    key = request.args.get('key')
+    key = request.args.get('key') or ""
     return render_template_string(HTML_TEMPLATE, key=key)
 
 if __name__ == '__main__':
