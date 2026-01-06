@@ -15,7 +15,19 @@ class BTCMLStrategyBase(BTCVolatilityBreakout):
         self.timeframe_str = timeframe
         self.model = None
         self.threshold = 0.5
+        
+        # Dynamic Params (Defaults)
+        self.dynamic_sl = 0.005 # 0.5%
+        self.dynamic_tp = 0.010 # 1.0%
+        
         self.load_model(model_path, thresh_path)
+        
+    def update_parameters(self, config):
+        """Called by LiveEngine to update dynamic params"""
+        try:
+            self.dynamic_sl = float(config.get("stop_loss_pct", 0.5)) / 100.0
+            self.dynamic_tp = float(config.get("take_profit_pct", 1.0)) / 100.0
+        except: pass # Keep defaults on error
         
     def load_model(self, model_path, thresh_path):
         if os.path.exists(model_path):
@@ -158,8 +170,8 @@ class BTCMLStrategy1m(BTCMLStrategyBase):
     def should_exit(self, df, position):
         current = df.iloc[-1]
         
-        # 1. Take Profit (0.40%)
-        if current["close"] >= position.entry * 1.0040: 
+        # 1. Take Profit (Dynamic)
+        if current["close"] >= position.entry * (1 + self.dynamic_tp): 
             return True
             
         # 2. Dynamic Trailing (Breakeven)
@@ -173,17 +185,10 @@ class BTCMLStrategy1m(BTCMLStrategyBase):
         # Since backtest engine is bar-by-bar, we can assume if High > Trigger, we represent "Protect Mode".
         # But simply:
         
-        # Normal Stop Loss (0.25%)
-        stop_price = position.entry * 0.9975
+        # 2. Stop Loss (Dynamic)
+        # Note: Breakeven logic above is commented out/complex, using simple SL for now
+        stop_price = position.entry * (1 - self.dynamic_sl)
         
-        # Check Breakeven Condition
-        # If current candle High > Trigger, and Close < Breakeven -> Stopped out at Breakeven
-        # This is optimistic (we might have hit TP). 
-        # Conservative: If High > 1.0030, we consider Trade RISK FREE.
-        # If Future Price < 1.0005, exit.
-        
-        # Simplified for Backtest:
-        # 2. Stop Loss (Standard)
         if current["close"] <= stop_price: 
             return True
             
