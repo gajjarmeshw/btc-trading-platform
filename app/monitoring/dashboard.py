@@ -538,14 +538,6 @@ def api_candles():
 
 import subprocess
 
-@app.route('/api/backtest', methods=['POST'])
-def api_backtest():
-    if not check_auth(): return jsonify({"error": "Auth failed"}), 403
-    
-    data = request.json
-    strategy = data.get("strategy", "ml_1m")
-    days = str(data.get("days", 180))
-    
 # --- TASK LOCKING ---
 TASK_LOCK = False
 
@@ -566,7 +558,8 @@ def api_backtest():
         TASK_LOCK = True
         try:
             cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy, "--days", days]
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
+            # bufsize=1 means line buffered (perfect for streaming text)
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=1)
             
             yield "Starting Backtest Simulation...\n"
             for line in iter(process.stdout.readline, ''):
@@ -599,7 +592,7 @@ def api_train():
         TASK_LOCK = True
         try:
             cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type, "--days", days]
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=1)
             
             yield "Starting Model Training...\n"
             for line in iter(process.stdout.readline, ''):
