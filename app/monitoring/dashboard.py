@@ -109,43 +109,48 @@ HTML_TEMPLATE = """
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if not check_auth():
-        return "Access Denied.", 403
+    try:
+        if not check_auth():
+            return "Access Denied.", 403
+            
+        key = request.args.get('key')
         
-    key = request.args.get('key')
+        # HANDLE CONFIG UPDATE
+        if request.method == 'POST':
+            new_config = {
+                "take_profit_pct": float(request.form.get('take_profit_pct')),
+                "stop_loss_pct": float(request.form.get('stop_loss_pct')),
+                "risk_per_trade": float(request.form.get('risk_per_trade')),
+                "max_open_positions": int(request.form.get('max_open_positions'))
+            }
+            save_config(new_config)
+        
+        # LOAD DATA
+        config = load_config()
+        status = get_status()
     
-    # HANDLE CONFIG UPDATE
-    if request.method == 'POST':
-        new_config = {
-            "take_profit_pct": float(request.form.get('take_profit_pct')),
-            "stop_loss_pct": float(request.form.get('stop_loss_pct')),
-            "risk_per_trade": float(request.form.get('risk_per_trade')),
-            "max_open_positions": int(request.form.get('max_open_positions'))
-        }
-        save_config(new_config)
+        # Read Logs
+        logs = ""
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, 'r') as f:
+                lines = f.readlines()
+                logs = "".join(lines[-50:]) # Fewer lines for improved UI
+        
+        # Read Trades
+        trades_html = "<p>No trades.</p>"
+        if os.path.exists(CSV_FILE):
+            try:
+                df = pd.read_csv(CSV_FILE)
+                if not df.empty:
+                    trades_html = df.tail(10).to_html(classes='data', border=0, index=False)
+                    trades_html = trades_html.replace('<th>', '<th style="text-align: left;">')
+            except: pass
     
-    # LOAD DATA
-    config = load_config()
-    status = get_status()
+        return render_template_string(HTML_TEMPLATE, logs=logs, trades_html=trades_html, config=config, status=status, key=key)
 
-    # Read Logs
-    logs = ""
-    if os.path.exists(LOG_FILE):
-        with open(LOG_FILE, 'r') as f:
-            lines = f.readlines()
-            logs = "".join(lines[-50:]) # Fewer lines for improved UI
-    
-    # Read Trades
-    trades_html = "<p>No trades.</p>"
-    if os.path.exists(CSV_FILE):
-        try:
-            df = pd.read_csv(CSV_FILE)
-            if not df.empty:
-                trades_html = df.tail(10).to_html(classes='data', border=0, index=False)
-                trades_html = trades_html.replace('<th>', '<th style="text-align: left;">')
-        except: pass
-
-    return render_template_string(HTML_TEMPLATE, logs=logs, trades_html=trades_html, config=config, status=status, key=key)
+    except Exception as e:
+        import traceback
+        return f"<h1>Internal Server Error</h1><pre>{traceback.format_exc()}</pre>", 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
