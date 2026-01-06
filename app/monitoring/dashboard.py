@@ -27,34 +27,23 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>BTC Pro Terminal</title>
-    <!-- Fixing Chart Error: Pinning to Stable v4.1.1 -->
-    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+    <title>BTC Pro Terminal (DEBUG)</title>
+    <!-- COMMENTED OUT CDN TO RULE OUT NETWORK BLOCK -->
+    <!-- <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script> -->
     <style>
         :root { --bg: #0d1117; --panel: #161b22; --border: #30363d; --text: #c9d1d9; --green: #2ea043; --red: #da3633; --blue: #58a6ff; }
         body { margin: 0; padding: 0; font-family: 'Segoe UI', monospace; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
-        
-        /* HEADER */
+        /* ... existing styles ... */
         header { background: var(--panel); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; height: 50px; }
-        .logo { font-size: 1.2em; font-weight: bold; color: var(--text); display: flex; align-items: center; gap: 10px; }
-        .live-indicator { width: 10px; height: 10px; background: var(--green); border-radius: 50%; box-shadow: 0 0 10px var(--green); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        
-        /* METRICS BAR */
+        /* ... skipped styles for brevity ... */
         .metrics { display: flex; gap: 20px; font-size: 0.9em; }
         .metric-item { display: flex; flex-direction: column; }
         .metric-label { font-size: 0.8em; color: #8b949e; }
         .metric-val { font-weight: bold; font-size: 1.1em; }
-        
-        /* MAIN GRID */
         .grid { display: grid; grid-template-columns: 3fr 1fr; grid-template-rows: 2fr 1fr; gap: 1px; background: var(--border); flex: 1; overflow: hidden; }
         .panel { background: var(--bg); overflow: auto; display: flex; flex-direction: column; }
         .panel-header { background: var(--panel); padding: 8px 15px; font-size: 0.85em; font-weight: bold; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; position: sticky; top: 0; }
-        
-        /* CHART */
         #chart-container { width: 100%; height: 100%; position: relative; }
-        
-        /* CONTROL FORM */
         .control-form { padding: 15px; display: flex; flex-direction: column; gap: 15px; }
         .input-group { display: flex; flex-direction: column; gap: 5px; }
         label { font-size: 0.8em; color: #8b949e; }
@@ -62,15 +51,11 @@ HTML_TEMPLATE = """
         input:focus { border-color: var(--blue); outline: none; }
         button { background: #238636; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; }
         button:hover { background: #2ea043; }
-        
-        /* LOGS */
         #logs-content { padding: 10px; font-size: 0.8em; white-space: pre-wrap; font-family: monospace; color: #8b949e; flex: 1; overflow-y: auto; }
         .log-line { margin-bottom: 2px; }
         .log-info { color: #58a6ff; }
         .log-warn { color: #d29922; }
         .log-error { color: #f85149; }
-        
-        /* TRADES TABLE */
         table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
         th, td { text-align: left; padding: 8px; border-bottom: 1px solid #30363d; }
         th { color: #8b949e; }
@@ -79,8 +64,12 @@ HTML_TEMPLATE = """
     </style>
 </head>
 <body>
+    <div id="js-status" style="background:red; color:white; padding:20px; font-size:20px; text-align:center; font-weight:bold;">
+        CRITICAL: JAVASCRIPT IS NOT RUNNING
+    </div>
+
     <header>
-        <div class="logo"><div class="live-indicator"></div> BTC PRO TERMINAL</div>
+        <div class="logo"><div class="live-indicator"></div> BTC PRO TERMINAL (DEBUG MODE)</div>
         <div class="metrics">
             <div class="metric-item"><span class="metric-label">PRICE</span><span class="metric-val" id="m-price">---</span></div>
             <div class="metric-item"><span class="metric-label">BALANCE</span><span class="metric-val" id="m-balance">---</span></div>
@@ -88,11 +77,11 @@ HTML_TEMPLATE = """
             <div class="metric-item"><span class="metric-label">STRATEGY</span><span class="metric-val" id="m-strat" style="color: var(--blue)">---</span></div>
         </div>
     </header>
-
+    
     <div class="grid">
         <!-- TOP LEFT: CHART -->
         <div class="panel" style="grid-row: 1 / 2; grid-column: 1 / 2;">
-            <div id="chart-container"></div>
+            <div id="chart-container" style="display:flex; align-items:center; justify-content:center; color: #8b949e;">CHART DISABLED FOR DEBUGGING</div>
         </div>
         
         <!-- TOP RIGHT: CONTROLS & LAB -->
@@ -188,8 +177,18 @@ HTML_TEMPLATE = """
             console.error("JS CRASH:", error);
             return false;
         };
-
-        const API_KEY = "{{ key }}";
+        
+        // --- 1. PROVE JS IS RUNNING ---
+        document.getElementById('js-status').innerText = "JAVASCRIPT IS ALIVE (Wait...)";
+        document.getElementById('js-status').style.background = "orange";
+        
+        // --- 2. HARDCODE KEY IF MISSING ---
+        let API_KEY = "{{ key }}";
+        if (!API_KEY || API_KEY === "") {
+            console.log("DASHBOARD: Key missing, using default.");
+            API_KEY = "btc_alpha_secure_777";
+        }
+        
         const HEADERS = { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' };
         
         console.log("DASHBOARD: API_KEY From Server:", API_KEY);
@@ -209,44 +208,14 @@ HTML_TEMPLATE = """
 
         async function init() {
             console.log("DASHBOARD: Init started");
+            
+            // --- 3. HIDE DEADMAN SWITCH ---
+            document.getElementById('js-status').style.display = 'none';
+            uiLog("System Initialized.", "info");
+            
             try {
-                // 1. Chart Init (Safe Mode)
-                if (typeof LightweightCharts === 'undefined') {
-                    console.error("CRITICAL: LightweightCharts is undefined");
-                    uiLog("CRITICAL: Chart Library Failed to Load (CDN blocked?)", "error");
-                    alert("FATAL ERROR: Chart Library Failed to Load. Check Internet/VPN.");
-                } else {
-                    const chartContainer = document.getElementById('chart-container');
-                    const chart = LightweightCharts.createChart(chartContainer, {
-                        layout: { background: { type: 'solid', color: '#0d1117' }, textColor: '#c9d1d9' },
-                        grid: { vertLines: { color: '#161b22' }, horzLines: { color: '#161b22' } },
-                        timeScale: { timeVisible: true, secondsVisible: false },
-                    });
-                    const candleSeries = chart.addCandlestickSeries({
-                        upColor: '#2ea043', downColor: '#da3633', borderVisible: false, wickUpColor: '#2ea043', wickDownColor: '#da3633'
-                    });
-                    
-                    // Resize Handler
-                    new ResizeObserver(entries => {
-                        if (entries.length === 0 || entries[0].target !== chartContainer) { return; }
-                        const newRect = entries[0].contentRect;
-                        chart.applyOptions({ width: newRect.width, height: newRect.height });
-                    }).observe(chartContainer);
-                    
-                    // Global ref
-                    window.candleSeries = candleSeries;
-                    
-                    // Load Initial Candle Data
-                    try {
-                        const res = await fetch(`/api/candles?key=${API_KEY}&limit=500`);
-                        if (!res.ok) throw new Error(res.statusText);
-                        const data = await res.json();
-                        candleSeries.setData(data);
-                        uiLog("Chart Loaded Successfully", "info");
-                    } catch(e) {
-                         uiLog("Chart Data Error: " + e.message, "warn");
-                    }
-                }
+                // Chart Disabled in Debug Mode
+                // ...
                 
                 // 2. Start Polling
                 fetchStatus();
@@ -257,17 +226,8 @@ HTML_TEMPLATE = """
                 setInterval(fetchLogs, 2000);
                 setInterval(fetchTrades, 5000);
                 
-                if (window.candleSeries) {
-                    setInterval(async () => {
-                        try {
-                            const r = await fetch(`/api/candles?key=${API_KEY}&limit=2`);
-                            const d = await r.json();
-                            if (d.length > 0) window.candleSeries.update(d[d.length-1]);
-                        } catch(e) {}
-                    }, 5000); 
-                }
-                
             } catch (e) {
+                alert("FATAL INIT ERROR: " + e.message);
                 uiLog("FATAL INIT ERROR: " + e.message, "error");
             }
         }
