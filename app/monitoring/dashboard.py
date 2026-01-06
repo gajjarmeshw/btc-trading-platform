@@ -546,44 +546,72 @@ def api_backtest():
     strategy = data.get("strategy", "ml_1m")
     days = str(data.get("days", 180))
     
+# --- TASK LOCKING ---
+TASK_LOCK = False
+
+@app.route('/api/backtest', methods=['POST'])
+def api_backtest():
+    global TASK_LOCK
+    if not check_auth(): return jsonify({"error": "Auth failed"}), 403
+    
+    if TASK_LOCK:
+        return jsonify({"output": "System Busy: A simulation/training is already running. Please wait."}), 429
+        
+    data = request.json
+    strategy = data.get("strategy", "ml_1m")
+    days = str(data.get("days", 180))
+    
     def generate():
-        cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy, "--days", days]
-        
-        # Popen with unbuffered output
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
-        
-        yield "Starting Backtest Simulation...\n"
-        
-        for line in iter(process.stdout.readline, ''):
-            yield line
+        global TASK_LOCK
+        TASK_LOCK = True
+        try:
+            cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "backtest_runner.py"), "--strategy", strategy, "--days", days]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
             
-        process.stdout.close()
-        process.wait()
-        yield f"\n[Process Finished with Code {process.returncode}]"
+            yield "Starting Backtest Simulation...\n"
+            for line in iter(process.stdout.readline, ''):
+                yield line
+            
+            process.stdout.close()
+            process.wait()
+            yield f"\n[Process Finished with Code {process.returncode}]"
+        except Exception as e:
+            yield f"\nError: {e}"
+        finally:
+            TASK_LOCK = False
 
     return Response(generate(), mimetype='text/plain')
 
 @app.route('/api/train', methods=['POST'])
 def api_train():
+    global TASK_LOCK
     if not check_auth(): return jsonify({"error": "Auth failed"}), 403
+    
+    if TASK_LOCK:
+        return jsonify({"output": "System Busy: A simulation/training is already running. Please wait."}), 429
     
     data = request.json
     strategy_type = data.get("type", "5m") 
     days = str(data.get("days", 180))
     
     def generate():
-        cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type, "--days", days]
-        
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
-        
-        yield "Starting Model Training...\n"
-        
-        for line in iter(process.stdout.readline, ''):
-            yield line
+        global TASK_LOCK
+        TASK_LOCK = True
+        try:
+            cmd = [sys.executable, "-u", os.path.join(BASE_DIR, "scripts/train_model.py"), "--type", strategy_type, "--days", days]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=BASE_DIR, bufsize=0)
             
-        process.stdout.close()
-        process.wait()
-        yield f"\n[Process Finished with Code {process.returncode}]"
+            yield "Starting Model Training...\n"
+            for line in iter(process.stdout.readline, ''):
+                yield line
+            
+            process.stdout.close()
+            process.wait()
+            yield f"\n[Process Finished with Code {process.returncode}]"
+        except Exception as e:
+            yield f"\nError: {e}"
+        finally:
+            TASK_LOCK = False
 
     return Response(generate(), mimetype='text/plain')
 

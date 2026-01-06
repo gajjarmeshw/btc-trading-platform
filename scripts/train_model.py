@@ -170,7 +170,7 @@ def train_model():
         'colsample_bytree': [0.6, 0.8, 1.0]
     }
     
-    xgb = XGBClassifier(scale_pos_weight=ratio, random_state=42, eval_metric='logloss')
+    xgb = XGBClassifier(scale_pos_weight=ratio, random_state=42, eval_metric='logloss', n_jobs=1)
     
     search = RandomizedSearchCV(
         xgb, 
@@ -180,7 +180,7 @@ def train_model():
         cv=3, 
         verbose=1, 
         random_state=42,
-        n_jobs=-1
+        n_jobs=1
     )
     
     search.fit(X_train, y_train)
