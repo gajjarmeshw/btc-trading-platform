@@ -51,10 +51,25 @@ def update_status(data):
 
 def get_status():
     """Reads status.json"""
+    defaults = {
+        "price": 0.0, 
+        "balance": "Loading...", 
+        "position": "FLAT", 
+        "strategy": "Initializing...", 
+        "last_updated": "-",
+        "active_config": {
+            "take_profit_pct": 1.0, 
+            "stop_loss_pct": 0.5
+        }
+    }
+    
     if not os.path.exists(STATUS_FILE):
-        return {}
+        return defaults
+        
     try:
         with open(STATUS_FILE, 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+            # Merge to ensure all keys exist
+            return {**defaults, **data}
     except Exception:
-        return {}
+        return defaults

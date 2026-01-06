@@ -167,17 +167,29 @@ HTML_TEMPLATE = """
         async function fetchStatus() {
             try {
                 const res = await fetch(`/api/status?key=${API_KEY}`);
+                if (!res.ok) throw new Error("API Error");
                 const data = await res.json();
                 
-                document.getElementById('m-price').innerText = "$" + parseFloat(data.price).toFixed(2);
-                document.getElementById('m-balance').innerText = data.balance;
-                document.getElementById('m-pos').innerText = data.position;
-                document.getElementById('m-pos').style.color = data.position === 'LONG' ? '#2ea043' : '#8b949e';
-                document.getElementById('m-strat').innerText = data.strategy.toUpperCase();
+                // Defensive rendering
+                const price = typeof data.price === 'number' ? data.price : 0.0;
+                document.getElementById('m-price').innerText = "$" + price.toFixed(2);
                 
-                // Sync dropdown if not focused
-                if (document.activeElement.id !== 'cfg-strat') {
-                    document.getElementById('cfg-strat').value = data.strategy;
+                document.getElementById('m-balance').innerText = data.balance || "0.00";
+                
+                const pos = data.position || "UNKNOWN";
+                document.getElementById('m-pos').innerText = pos;
+                document.getElementById('m-pos').style.color = pos === 'LONG' ? '#2ea043' : '#8b949e';
+                
+                const strat = data.strategy || "Starting...";
+                document.getElementById('m-strat').innerText = strat.toUpperCase();
+                
+                // Sync dropdown if not focused AND we have a valid config strategy
+                if (document.activeElement.id !== 'cfg-strat' && data.strategy) {
+                    // Check if option exists
+                    const sel = document.getElementById('cfg-strat');
+                    if ([...sel.options].some(o => o.value === data.strategy)) {
+                         sel.value = data.strategy;
+                    }
                 }
             } catch(e) { console.error("Status error", e); }
         }
