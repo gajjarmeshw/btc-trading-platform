@@ -18,7 +18,17 @@ class LiveEngine:
         
         logging.info(f"Engine Initialized. Strategy: {strategy.name} | Interval: {self.interval_seconds}s")
 
-    # ... (sync_time remains) ...
+    def sync_time(self):
+        """Align with candle close"""
+        now = time.time()
+        # Remaining time until next interval
+        sleep_time = self.interval_seconds - (now % self.interval_seconds)
+        
+        # Add small buffer to ensure candle is closed at exchange
+        sleep_time += 1 
+        
+        logging.info(f"Waiting {sleep_time:.1f}s for candle close...")
+        time.sleep(sleep_time)
 
     def run(self):
         logging.info("Starting Live Trading Loop...")
