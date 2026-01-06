@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, Response
+from flask import Flask, render_template_string, request, Response, jsonify
 import pandas as pd
 import os
 
@@ -185,21 +185,29 @@ HTML_TEMPLATE = """
         const API_KEY = "{{ key }}";
         const HEADERS = { 'X-API-KEY': API_KEY, 'Content-Type': 'application/json' };
         
+        console.log("DASHBOARD: API_KEY From Server:", API_KEY);
+
         // --- DIAGNOSTICS ---
         function uiLog(msg, type="info") {
+            console.log(`[${type.toUpperCase()}] ${msg}`);
             const container = document.getElementById('logs-content');
-            const div = document.createElement('div');
-            div.className = "log-line log-" + type;
-            div.innerText = "[DASHBOARD] " + msg;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            if (container) {
+                const div = document.createElement('div');
+                div.className = "log-line log-" + type;
+                div.innerText = "[DASHBOARD] " + msg;
+                container.appendChild(div);
+                container.scrollTop = container.scrollHeight;
+            }
         }
 
         async function init() {
+            console.log("DASHBOARD: Init started");
             try {
                 // 1. Chart Init (Safe Mode)
                 if (typeof LightweightCharts === 'undefined') {
+                    console.error("CRITICAL: LightweightCharts is undefined");
                     uiLog("CRITICAL: Chart Library Failed to Load (CDN blocked?)", "error");
+                    alert("FATAL ERROR: Chart Library Failed to Load. Check Internet/VPN.");
                 } else {
                     const chartContainer = document.getElementById('chart-container');
                     const chart = LightweightCharts.createChart(chartContainer, {
