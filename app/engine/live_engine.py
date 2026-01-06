@@ -50,12 +50,22 @@ class LiveEngine:
                 
                 # Fetch Data
                 df = self.data_feed.get_latest()
+                trend = self.data_feed.get_1h_trend()
+                
                 if df is None or len(df) < 200:
                     logging.warning(f"Insufficient data ({len(df) if df is not None else 0} rows). Retrying next cycle.")
                     continue
+                
+                # Inject 1H trend (So strategy doesn't need to resample)
+                df["trend_1h"] = trend
                     
                 # Calculate Indicators
                 df = self.strategy.indicators(df)
+                
+                if len(df) == 0:
+                     logging.warning("DataFrame empty after indicators (Check dropna). Retrying...")
+                     continue
+                     
                 current_price = df.iloc[-1]["close"]
                 
                 if not self.executor.has_position():

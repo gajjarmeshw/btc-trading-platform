@@ -50,15 +50,16 @@ class BTCMLStrategyBase(BTCVolatilityBreakout):
             df[f"{col}_change"] = df[col] - df[f"{col}_lag1"]
             
         # 3. Multi-Timeframe Trend (1H)
-        if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
-             df["timestamp"] = pd.to_datetime(df["timestamp"])
-
-        df_1h = df.resample("1h", on="timestamp").agg({"close": "last"}).dropna()
-        df_1h["sma200_1h"] = ta.trend.sma_indicator(df_1h["close"], window=200)
-        df_1h = df_1h[["sma200_1h"]]
-        
-        df = pd.merge_asof(df.sort_values("timestamp"), df_1h.sort_values("timestamp"), on="timestamp", direction="backward")
-        df["trend_1h"] = np.where(df["close"] > df["sma200_1h"], 1, -1)
+        if "trend_1h" not in df.columns:
+            if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
+                 df["timestamp"] = pd.to_datetime(df["timestamp"])
+    
+            df_1h = df.resample("1h", on="timestamp").agg({"close": "last"}).dropna()
+            df_1h["sma200_1h"] = ta.trend.sma_indicator(df_1h["close"], window=200)
+            df_1h = df_1h[["sma200_1h"]]
+            
+            df = pd.merge_asof(df.sort_values("timestamp"), df_1h.sort_values("timestamp"), on="timestamp", direction="backward")
+            df["trend_1h"] = np.where(df["close"] > df["sma200_1h"], 1, -1)
         
         # 4. Micro-Structure (Only for 1m subclass overrides, but we can compute here for base too or pass)
         # We'll compute it here for simplicity
