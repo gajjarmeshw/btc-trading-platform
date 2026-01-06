@@ -14,6 +14,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 LOG_FILE = os.path.join(BASE_DIR, 'trading.log')
 CSV_FILE = os.path.join(BASE_DIR, 'data', 'live_trades.csv')
 
+import sys
+sys.path.append(BASE_DIR)
+
 import json
 from app.config.dynamic_config import load_config, save_config, get_status
 
